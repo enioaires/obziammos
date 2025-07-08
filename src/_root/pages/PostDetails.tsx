@@ -10,11 +10,13 @@ import AudioPlayer from "@/components/shared/AudioPlayer";
 import { Button } from "@/components/ui/button";
 import CollapsibleCaption from "@/components/shared/CollapsibleCaption";
 import CommentsSection from "@/components/shared/CommentsSection";
+import ConfirmModal from '@/components/shared/ConfirmModal';
 import GridPostList from "@/components/shared/GridPostList";
 import Loader from "@/components/shared/Loader";
 import PostStats from "@/components/shared/PostStats";
 import { isAdmin } from "@/lib/adventures";
 import { multiFormatDateString } from "@/lib/utils";
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { useGetAdventuresForUser } from "@/lib/react-query/adventures";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,6 +24,7 @@ import { useUserContext } from "@/context/AuthContext";
 
 const PostDetails = () => {
   const navigate = useNavigate();
+  const confirmModal = useConfirmModal();
   const { id } = useParams();
   const { user } = useUserContext();
   const { toast } = useToast();
@@ -52,9 +55,12 @@ const PostDetails = () => {
   const handleDeletePost = () => {
     if (!id || !post) return;
 
-    const confirmMessage = `Tem certeza que deseja deletar o post "${post.title}"?\n\nEsta ação não pode ser desfeita.`;
-
-    if (confirm(confirmMessage)) {
+    confirmModal.openModal({
+      title: 'Deletar Post',
+      message: `Tem certeza que deseja deletar o post "${post.title}"?\n\nEsta ação não pode ser desfeita.`,
+      confirmText: 'Deletar',
+      variant: 'danger'
+    }, () => {
       deletePost({ postId: id, imageId: post.imageId }, {
         onSuccess: () => {
           toast({
@@ -70,7 +76,7 @@ const PostDetails = () => {
           });
         }
       });
-    }
+    });
   };
 
   const handleBackClick = () => {
@@ -310,6 +316,16 @@ const PostDetails = () => {
           </div>
         )}
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.closeModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.options.title}
+        message={confirmModal.options.message}
+        confirmText={confirmModal.options.confirmText}
+        variant={confirmModal.options.variant}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

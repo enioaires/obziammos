@@ -62,7 +62,6 @@ const AllUsers = () => {
       });
     }
 
-    // Ordenar: online primeiro, depois admins, depois por nome
     return [...filtered].sort((a, b) => {
       // Primeiro por status online
       const aOnline = a.lastSeen ? getOnlineStatus(a.lastSeen).isOnline : false;
@@ -72,12 +71,16 @@ const AllUsers = () => {
         return aOnline ? -1 : 1;
       }
       
-      // Depois por role (admins primeiro)
-      if (a.role !== b.role) {
-        return a.role === 'admin' ? -1 : 1;
+      // Se ambos online ou offline, ordenar por lastSeen mais recente
+      if (a.lastSeen && b.lastSeen) {
+        return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
       }
       
-      // Por último, por nome alfabético
+      // Se um não tem lastSeen, vai para o final
+      if (!a.lastSeen && b.lastSeen) return 1;
+      if (a.lastSeen && !b.lastSeen) return -1;
+      
+      // Por último, ordenar por nome
       return a.name.localeCompare(b.name);
     });
   }, [allUsers?.documents, searchTerm, roleFilter, onlineFilter, userIsAdmin]);

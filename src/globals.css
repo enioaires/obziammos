@@ -198,7 +198,8 @@
   }
 
   .post-details-action-button.danger:hover {
-    @apply bg-red-500/20 text-red-400;
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
   }
 
   /* Responsividade para mobile */

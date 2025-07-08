@@ -2,10 +2,12 @@ import { ChevronDown, ChevronUp, MessageCircle, Reply, Send, Trash2 } from 'luci
 import React, { useRef, useState } from 'react';
 import { useCreateComment, useDeleteComment, useGetCommentsByPostId } from '@/lib/react-query/comments';
 
+import ConfirmModal from '@/components/shared/ConfirmModal';
 import Loader from './Loader';
 import { Models } from 'appwrite';
 import { isAdmin } from '@/lib/adventures';
 import { timeAgo } from '@/lib/utils';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { useGetUsers } from '@/lib/react-query/user';
 import { useToast } from '@/components/ui/use-toast';
 import { useUserContext } from '@/context/AuthContext';
@@ -23,6 +25,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   onToggle,
   isModal = false
 }) => {
+  const confirmModal = useConfirmModal();
   const { user } = useUserContext();
   const { toast } = useToast();
   const [newComment, setNewComment] = useState('');
@@ -111,7 +114,12 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
   const handleDeleteComment = (commentId: string, isOwner: boolean) => {
     if (!isOwner && !userIsAdmin) return;
 
-    if (confirm('Tem certeza que deseja deletar este comentário?')) {
+    confirmModal.openModal({
+      title: 'Deletar Comentário',
+      message: 'Tem certeza que deseja deletar este comentário?',
+      confirmText: 'Deletar',
+      variant: 'danger'
+    }, () => {
       deleteComment({ commentId, postId }, {
         onSuccess: () => {
           toast({
@@ -126,7 +134,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
           });
         }
       });
-    }
+    });
   };
 
   const toggleReply = (commentId: string) => {
@@ -197,11 +205,10 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
               {!isReply && (
                 <button
                   onClick={() => toggleReply(comment.$id)}
-                  className={`flex items-center gap-1 text-xs transition-colors ${
-                    isShowingReplyForm 
-                      ? 'text-primary-500' 
+                  className={`flex items-center gap-1 text-xs transition-colors ${isShowingReplyForm
+                      ? 'text-primary-500'
                       : 'text-light-4 hover:text-primary-500'
-                  }`}
+                    }`}
                 >
                   <Reply className="w-3 h-3" />
                   <span>{isShowingReplyForm ? 'Cancelar' : 'Responder'}</span>
@@ -367,6 +374,16 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
           ))
         )}
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.closeModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.options.title}
+        message={confirmModal.options.message}
+        confirmText={confirmModal.options.confirmText}
+        variant={confirmModal.options.variant}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
