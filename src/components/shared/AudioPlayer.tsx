@@ -24,7 +24,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
     if (!audio) return;
 
     const handleLoadedData = () => {
-      console.log('Audio loaded:', audioUrl);
       setDuration(audio.duration);
       setIsLoading(false);
     };
@@ -48,7 +47,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
 
-    // Force load
     audio.load();
 
     return () => {
@@ -131,12 +129,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
 
   if (isLoading) {
     return (
-      <div className="bg-dark-3 rounded-lg p-4 animate-pulse">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-dark-4 rounded-full"></div>
+      <div className="bg-dark-3 rounded-lg p-3 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-dark-4 rounded-full"></div>
           <div className="flex-1">
-            <div className="h-4 bg-dark-4 rounded mb-2"></div>
-            <div className="h-3 bg-dark-4 rounded w-2/3"></div>
+            <div className="h-3 bg-dark-4 rounded mb-1"></div>
+            <div className="h-2 bg-dark-4 rounded w-2/3"></div>
           </div>
         </div>
       </div>
@@ -144,7 +142,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
   }
 
   return (
-    <div className="bg-dark-3 rounded-lg p-4 border border-dark-4">
+    <div className="bg-dark-3 rounded-lg p-3 border border-dark-4">
       <audio 
         ref={audioRef} 
         src={audioUrl} 
@@ -152,70 +150,66 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
         crossOrigin="anonymous"
       />
 
-      {/* Controles principais */}
-      <div className="flex items-center gap-3 mb-3">
-        {/* Botão skip back */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => skip(-10)}
-          className="w-8 h-8 p-0 hover:bg-dark-4"
+      {/* Barra de progresso no topo - Mobile First */}
+      <div className="mb-3">
+        <div
+          ref={progressRef}
+          onClick={handleProgressClick}
+          className="h-2 bg-dark-4 rounded-full cursor-pointer relative group"
         >
-          <SkipBack className="w-4 h-4 text-light-3" />
-        </Button>
-
-        {/* Botão play/pause */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={togglePlay}
-          className="w-12 h-12 p-0 bg-primary-500 hover:bg-primary-600 rounded-full"
-        >
-          {isPlaying ? (
-            <Pause className="w-5 h-5 text-white" />
-          ) : (
-            <Play className="w-5 h-5 text-white ml-0.5" />
-          )}
-        </Button>
-
-        {/* Botão skip forward */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => skip(10)}
-          className="w-8 h-8 p-0 hover:bg-dark-4"
-        >
-          <SkipForward className="w-4 h-4 text-light-3" />
-        </Button>
-
-        {/* Tempo atual */}
-        <span className="text-light-4 text-sm tabular-nums">
-          {formatTime(currentTime)}
-        </span>
-
-        {/* Barra de progresso */}
-        <div className="flex-1">
           <div
-            ref={progressRef}
-            onClick={handleProgressClick}
-            className="h-2 bg-dark-4 rounded-full cursor-pointer relative group"
+            className="h-full bg-primary-500 rounded-full relative transition-all duration-150"
+            style={{ width: `${progressPercentage}%` }}
           >
-            <div
-              className="h-full bg-primary-500 rounded-full relative transition-all duration-150"
-              style={{ width: `${progressPercentage}%` }}
-            >
-              <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-primary-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
+            <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-primary-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
+        
+        {/* Tempo - Mobile */}
+        <div className="flex justify-between text-xs text-light-4 mt-1">
+          <span className="tabular-nums">{formatTime(currentTime)}</span>
+          <span className="tabular-nums">{formatTime(duration)}</span>
+        </div>
+      </div>
 
-        {/* Duração total */}
-        <span className="text-light-4 text-sm tabular-nums">
-          {formatTime(duration)}
-        </span>
+      {/* Controles principais - Mobile First */}
+      <div className="flex items-center justify-between">
+        {/* Controles de pulo e play */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => skip(-10)}
+            className="w-8 h-8 p-0 hover:bg-dark-4"
+          >
+            <SkipBack className="w-3 h-3 text-light-3" />
+          </Button>
 
-        {/* Controle de volume */}
-        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={togglePlay}
+            className="w-10 h-10 p-0 bg-primary-500 hover:bg-primary-600 rounded-full"
+          >
+            {isPlaying ? (
+              <Pause className="w-4 h-4 text-white" />
+            ) : (
+              <Play className="w-4 h-4 text-white ml-0.5" />
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => skip(10)}
+            className="w-8 h-8 p-0 hover:bg-dark-4"
+          >
+            <SkipForward className="w-3 h-3 text-light-3" />
+          </Button>
+        </div>
+
+        {/* Volume - Escondido no mobile, visível no desktop */}
+        <div className="hidden sm:flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -239,10 +233,18 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
             className="w-16 h-1 bg-dark-4 rounded-lg appearance-none cursor-pointer slider"
           />
         </div>
+
+        {/* Status - Mobile */}
+        <div className="flex items-center gap-1 sm:hidden">
+          <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+          <span className="text-xs text-light-4">
+            {isPlaying ? 'Play' : 'Pause'}
+          </span>
+        </div>
       </div>
 
-      {/* Indicador de carregamento/reprodução */}
-      <div className="flex items-center justify-between text-xs text-light-4">
+      {/* Status desktop */}
+      <div className="hidden sm:flex items-center justify-between text-xs text-light-4 mt-2">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
           <span>{isPlaying ? 'Reproduzindo' : 'Pausado'}</span>
