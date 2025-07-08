@@ -7,11 +7,11 @@ import {
   getCommentsCount,
   updateComment
 } from "@/lib/appwrite/comments/api";
-import { createNotificationWithRetry, ensureNotificationData } from "@/lib/notifications";
+import { createCommentNotification, createReplyNotification } from "@/lib/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { buildNotificationMessage } from "@/lib/appwrite/notifications/api";
-import { useCreateNotification } from "@/lib/react-query/notifications";
+import { getCurrentUser } from "@/lib/appwrite/auth/api";
+import { getPostById } from "@/lib/appwrite/posts/api";
 
 // ==================== QUERY KEYS ====================
 
@@ -54,104 +54,51 @@ export const useGetCommentsCount = (postId: string) => {
 
 export const useCreateComment = () => {
   const queryClient = useQueryClient();
-  const { mutate: createNotification } = useCreateNotification();
 
   return useMutation({
     mutationFn: (comment: INewComment) => createComment(comment),
     onSuccess: async (data, variables) => {
+      // Invalidar queries
       queryClient.invalidateQueries({
         queryKey: [COMMENT_QUERY_KEYS.GET_COMMENTS_BY_POST, variables.postId],
       });
 
-      queryClient.invalidateQueries({
-        queryKey: [COMMENT_QUERY_KEYS.GET_COMMENTS_COUNT, variables.postId],
-      });
-
+      // Notificação simples
       try {
-        console.log('🔔 Processing comment notification...', variables);
+        const currentUser = await getCurrentUser();
+        const postData = await getPostById(variables.postId);
+        
+        if (!currentUser || !postData) return;
 
-        const { userId, postId, parentCommentId } = variables;
-
-        const notificationData = await ensureNotificationData(
-          queryClient,
-          userId,
-          'pending',
-          postId
-        );
-
-        if (!notificationData) {
-          console.error('❌ Failed to get notification data');
-          return;
-        }
-
-        const { triggerUser, post } = notificationData;
-
-        if (parentCommentId) {
-          let parentComment = null;
-
-          const commentsCache = queryClient.getQueryData([COMMENT_QUERY_KEYS.GET_COMMENTS_BY_POST, postId]) as any;
-          parentComment = commentsCache?.documents?.find((c: any) => c.$id === parentCommentId);
-
-          if (!parentComment) {
-            console.log('🔄 Parent comment not in cache, fetching from API...');
-            parentComment = await getCommentById(parentCommentId);
+        if (variables.parentCommentId) {
+          // É uma resposta
+          const parentComment = await getCommentById(variables.parentCommentId);
+          
+          if (parentComment && parentComment.userId !== currentUser.$id) {
+            await createReplyNotification(
+              parentComment.userId,
+              currentUser.$id,
+              currentUser.name,
+              postData.$id,
+              data.$id,
+              postData.title
+            );
           }
-
-          if (!parentComment) {
-            console.error('❌ Parent comment not found:', parentCommentId);
-            return;
-          }
-
-          if (parentComment.userId === userId) {
-            console.log('⏭️ Skipping self-reply notification');
-            return;
-          }
-
-          const message = buildNotificationMessage(
-            'reply',
-            triggerUser.name,
-            post.title
-          );
-
-          const replyNotificationData = {
-            type: 'reply',
-            recipientUserId: parentComment.userId,
-            triggerUserId: userId,
-            postId,
-            commentId: data.$id,
-            message
-          };
-
-          console.log('📤 Creating reply notification:', replyNotificationData);
-          await createNotificationWithRetry(createNotification, replyNotificationData);
-
         } else {
-          if (post.creator.$id === userId) {
-            console.log('⏭️ Skipping self-comment notification');
-            return;
+          // É um comentário novo
+          if (postData.creator.$id !== currentUser.$id) {
+            await createCommentNotification(
+              postData.creator.$id,
+              currentUser.$id,
+              currentUser.name,
+              postData.$id,
+              data.$id,
+              postData.title
+            );
           }
-
-          const message = buildNotificationMessage(
-            'comment',
-            triggerUser.name,
-            post.title
-          );
-
-          const commentNotificationData = {
-            type: 'comment',
-            recipientUserId: post.creator.$id,
-            triggerUserId: userId,
-            postId,
-            commentId: data.$id,
-            message
-          };
-
-          console.log('📤 Creating comment notification:', commentNotificationData);
-          await createNotificationWithRetry(createNotification, commentNotificationData);
         }
-
       } catch (error) {
-        console.error('❌ Error in comment notification process:', error);
+        console.error('Error creating comment notification:', error);
       }
     },
   });

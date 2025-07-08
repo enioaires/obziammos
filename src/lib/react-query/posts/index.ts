@@ -18,12 +18,11 @@ import {
   searchPosts,
   updatePost
 } from "@/lib/appwrite/posts/api";
-import { getCurrentUser, getUserById } from "@/lib/appwrite/auth/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { QUERY_KEYS } from "../queryKeys";
-import { buildNotificationMessage } from "@/lib/appwrite/notifications/api";
-import { useCreateNotification } from "@/lib/react-query/notifications";
+import { createLikeNotification } from "@/lib/notifications";
+import { getCurrentUser } from "@/lib/appwrite/auth/api";
 
 // ==================== HOOKS DE POSTS EXISTENTES ====================
 
@@ -54,162 +53,46 @@ export const useCreatePost = () => {
 
 export const useLikePost = () => {
   const queryClient = useQueryClient();
-  const { mutate: createNotification } = useCreateNotification();
 
   return useMutation({
     mutationFn: ({ postId, likesArray }: {
       postId: string;
       likesArray: string[];
     }) => likePost(postId, likesArray),
-    onMutate: async (variables) => {
-      // Capturar estado ANTES da mutação
-      const previousPostData = queryClient.getQueryData([QUERY_KEYS.GET_POST_BY_ID, variables.postId]) as any;
-      
-      if (previousPostData) {
-        const previousLikes = previousPostData.likes?.map((like: any) => 
-          typeof like === 'string' ? like : like.$id
-        ) || [];
-        
-        console.log('📸 Captured state BEFORE mutation:', {
-          postId: variables.postId,
-          previousLikes,
-          newLikes: variables.likesArray,
-          previousCount: previousLikes.length,
-          newCount: variables.likesArray.length
-        });
-        
-        // Armazenar no contexto da mutação
-        return { previousLikes, previousPostData };
-      }
-      
-      return { previousLikes: [], previousPostData: null };
-    },
-    onSuccess: async (data, variables, context) => {
-      console.log('🎯 useLikePost onSuccess triggered', { data, variables, context });
-      
+    onSuccess: async (_data, variables) => {
+      // Invalidar queries
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.GET_POST_BY_ID, data?.$id],
+        queryKey: [QUERY_KEYS.GET_POST_BY_ID, variables.postId],
       });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.GET_RECENT_POSTS],
       });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.GET_POSTS],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.GET_CURRENT_USER],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.GET_POSTS_BY_ADVENTURES],
-      });
 
-      // Lógica de notificação melhorada
+      // Notificação simples
       try {
-        console.log('🔔 Processing like notification...', variables);
-        
         const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          console.error('❌ Current user not found');
-          return;
-        }
-
-        const likerUserId = currentUser.$id;
+        const postData = await getPostById(variables.postId);
         
-        // Usar dados do contexto (estado anterior) ou buscar da API
-        let postData = context?.previousPostData;
+        if (!currentUser || !postData) return;
         
-        if (!postData) {
-          console.log('🔄 Post data not in context, fetching from API...');
-          postData = await getPostById(variables.postId);
-        }
-
-        if (!postData) {
-          console.error('❌ Post data not found:', variables.postId);
-          return;
-        }
-
-        // Verificar se não é auto-like
-        if (likerUserId === postData.creator?.$id) {
-          console.log('⏭️ Skipping self-like notification');
-          return;
-        }
-
-        // Usar dados do contexto (mais confiável)
-        const previousLikes = context?.previousLikes || [];
-        const newLikes = variables.likesArray;
-
-        console.log('📊 Like comparison (from context):', {
-          previousLikes,
-          newLikes,
-          previousCount: previousLikes.length,
-          newCount: newLikes.length
-        });
-
-        const wasLiked = newLikes.length > previousLikes.length;
-
-        console.log('👍 Was liked?', wasLiked);
-
-        if (!wasLiked) {
-          console.log('⏭️ Was unlike, skipping notification');
-          return;
-        }
-
-        // Verificar qual usuário curtiu (novo like)
-        const actualLikerUserId = newLikes.find(userId => !previousLikes.includes(userId));
-
-        console.log('👤 Liker user ID:', actualLikerUserId);
-
-        if (!actualLikerUserId) {
-          console.log('⚠️ Could not determine who liked');
-          return;
-        }
-
-        // Verificar se não é auto-like (dupla verificação)
-        if (actualLikerUserId === postData.creator?.$id) {
-          console.log('⏭️ Skipping self-like notification (creator check)');
-          return;
-        }
-
-        // Buscar dados do usuário que curtiu do cache primeiro
-        const usersCache = queryClient.getQueryData([QUERY_KEYS.GET_USERS]) as any;
-        let triggerUser = usersCache?.documents?.find((u: any) => u.$id === actualLikerUserId);
+        // Verificar se foi like (não unlike)
+        const isLike = variables.likesArray.includes(currentUser.$id);
         
-        if (!triggerUser) {
-          console.log('🔄 Trigger user not in cache, fetching from API...');
-          triggerUser = await getUserById(actualLikerUserId);
+        if (isLike && currentUser.$id !== postData.creator.$id) {
+          await createLikeNotification(
+            postData.creator.$id,
+            currentUser.$id,
+            currentUser.name,
+            postData.$id,
+            postData.title
+          );
         }
-
-        if (!triggerUser) {
-          console.error('❌ Trigger user not found:', actualLikerUserId);
-          return;
-        }
-
-        console.log('👤 Trigger user found:', triggerUser.name);
-
-        const message = buildNotificationMessage(
-          'like',
-          triggerUser.name,
-          postData.title
-        );
-
-        const notificationData = {
-          type: 'like' as const,
-          recipientUserId: postData.creator.$id,
-          triggerUserId: actualLikerUserId,
-          postId: postData.$id,
-          message
-        };
-
-        console.log('📤 Creating like notification:', notificationData);
-        
-        createNotification(notificationData);
-
       } catch (error) {
-        console.error('❌ Error in like notification process:', error);
+        console.error('Error creating like notification:', error);
       }
     },
   });
-}
+};
 
 export const useSavePost = () => {
   const queryClient = useQueryClient();

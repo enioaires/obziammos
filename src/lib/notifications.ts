@@ -1,99 +1,115 @@
-import { QUERY_KEYS } from "@/lib/react-query/queryKeys";
-import { QueryClient } from "@tanstack/react-query";
-import { getPostById } from "@/lib/appwrite/posts/api";
-import { getUserById } from "@/lib/appwrite/auth/api";
+import { buildNotificationMessage, createNotification } from '@/lib/appwrite/notifications/api';
 
-interface NotificationData {
-  triggerUser: any;
-  recipientUser: any;
-  post: any;
-}
+import { INewNotification } from '@/types';
 
-export const ensureNotificationData = async (
-  queryClient: QueryClient,
-  triggerUserId: string,
+export const createNotificationSafe = async (
+  type: 'like' | 'comment' | 'reply',
   recipientUserId: string,
-  postId: string
-): Promise<NotificationData | null> => {
-  try {
-    console.log('🔔 Ensuring notification data...', { triggerUserId, recipientUserId, postId });
+  triggerUserId: string,
+  triggerUserName: string,
+  postId: string,
+  postTitle?: string,
+  commentId?: string,
+  maxRetries = 2
+): Promise<void> => {
+  // Não notificar a si mesmo
+  if (recipientUserId === triggerUserId) {
+    return;
+  }
 
-    let triggerUser = null;
-    let recipientUser = null;
-    let post = null;
+  const message = buildNotificationMessage(type, triggerUserName, postTitle);
+  
+  const notificationData: INewNotification = {
+    type,
+    recipientUserId,
+    triggerUserId,
+    postId,
+    commentId,
+    message,
+  };
 
-    // 1. Buscar usuário que triggou (do cache primeiro, API como fallback)
-    const usersCache = queryClient.getQueryData([QUERY_KEYS.GET_USERS]) as any;
-    triggerUser = usersCache?.documents?.find((u: any) => u.$id === triggerUserId);
-    
-    if (!triggerUser) {
-      console.log('🔄 Trigger user not in cache, fetching from API...');
-      triggerUser = await getUserById(triggerUserId);
+  let attempts = 0;
+  
+  while (attempts < maxRetries) {
+    try {
+      const result = await createNotification(notificationData);
+      
+      if (result) {
+        console.log(`✅ Notification created: ${type} for user ${recipientUserId}`);
+        return;
+      }
+      
+      // Se retornou null (duplicada ou erro), não retry
+      break;
+    } catch (error) {
+      attempts++;
+      console.warn(`⚠️ Notification attempt ${attempts} failed:`, error);
+      
+      if (attempts >= maxRetries) {
+        console.error(`❌ Failed to create notification after ${maxRetries} attempts`);
+        break;
+      }
+      
+      // Aguardar antes de tentar novamente
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
     }
-
-    if (!triggerUser) {
-      console.error('❌ Trigger user not found:', triggerUserId);
-      return null;
-    }
-
-    // 2. Buscar usuário destinatário
-    recipientUser = usersCache?.documents?.find((u: any) => u.$id === recipientUserId);
-    
-    if (!recipientUser) {
-      console.log('🔄 Recipient user not in cache, fetching from API...');
-      recipientUser = await getUserById(recipientUserId);
-    }
-
-    if (!recipientUser) {
-      console.error('❌ Recipient user not found:', recipientUserId);
-      return null;
-    }
-
-    // 3. Buscar dados do post
-    post = queryClient.getQueryData([QUERY_KEYS.GET_POST_BY_ID, postId]) as any;
-    
-    if (!post) {
-      console.log('🔄 Post not in cache, fetching from API...');
-      post = await getPostById(postId);
-    }
-
-    if (!post) {
-      console.error('❌ Post not found:', postId);
-      return null;
-    }
-
-    console.log('✅ All notification data found');
-    return { triggerUser, recipientUser, post };
-
-  } catch (error) {
-    console.error('❌ Error ensuring notification data:', error);
-    return null;
   }
 };
 
-export const createNotificationWithRetry = async (
-  createNotificationFn: (data: any) => void,
-  notificationData: any,
-  maxRetries = 2
+// Helper específico para likes
+export const createLikeNotification = async (
+  postOwnerId: string,
+  likerId: string,
+  likerName: string,
+  postId: string,
+  postTitle?: string
 ) => {
-  let attempts = 0;
-  
-  while (attempts <= maxRetries) {
-    try {
-      console.log(`🔔 Creating notification (attempt ${attempts + 1}/${maxRetries + 1})`);
-      createNotificationFn(notificationData);
-      console.log('✅ Notification created successfully');
-      return;
-    } catch (error) {
-      console.error(`❌ Notification creation failed (attempt ${attempts + 1}):`, error);
-      attempts++;
-      
-      if (attempts <= maxRetries) {
-        console.log(`⏳ Retrying in 500ms...`);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-  }
-  
-  console.error('❌ Notification creation failed after all retries');
+  await createNotificationSafe(
+    'like',
+    postOwnerId,
+    likerId,
+    likerName,
+    postId,
+    postTitle
+  );
+};
+
+// Helper específico para comentários
+export const createCommentNotification = async (
+  postOwnerId: string,
+  commenterId: string,
+  commenterName: string,
+  postId: string,
+  commentId: string,
+  postTitle?: string
+) => {
+  await createNotificationSafe(
+    'comment',
+    postOwnerId,
+    commenterId,
+    commenterName,
+    postId,
+    postTitle,
+    commentId
+  );
+};
+
+// Helper específico para respostas
+export const createReplyNotification = async (
+  parentCommentOwnerId: string,
+  replierId: string,
+  replierName: string,
+  postId: string,
+  replyId: string,
+  postTitle?: string
+) => {
+  await createNotificationSafe(
+    'reply',
+    parentCommentOwnerId,
+    replierId,
+    replierName,
+    postId,
+    postTitle,
+    replyId
+  );
 };

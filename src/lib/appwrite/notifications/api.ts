@@ -1,18 +1,32 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { appwriteConfig, database } from "../config";
 
 import { INewNotification } from "@/types";
 import { Query } from "appwrite";
 import { v4 } from "uuid";
 
-// ==================== NOTIFICATIONS CRUD ====================
-
 export async function createNotification(notification: INewNotification) {
   try {
-    // Validar se não é auto-interação
+    // Não notificar a si mesmo
     if (notification.recipientUserId === notification.triggerUserId) {
-      console.log("Skipping self-notification");
+      return null;
+    }
+
+    // Verificar se já existe notificação similar recente (evitar spam)
+    const existingNotifications = await database.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.notificationsCollectionId,
+      [
+        Query.equal("recipientUserId", notification.recipientUserId),
+        Query.equal("triggerUserId", notification.triggerUserId),
+        Query.equal("type", notification.type),
+        Query.equal("postId", notification.postId || ""),
+        Query.greaterThan("$createdAt", new Date(Date.now() - 60000).toISOString()), // 1 minuto
+        Query.limit(1)
+      ]
+    );
+
+    if (existingNotifications.documents.length > 0) {
+      console.log("Notification already exists recently, skipping");
       return null;
     }
 
@@ -31,17 +45,14 @@ export async function createNotification(notification: INewNotification) {
       }
     );
 
-    if (!newNotification) throw Error;
-
-    console.log("Notification created:", newNotification);
     return newNotification;
   } catch (error) {
-    console.log("Error creating notification:", error);
-    throw error;
+    console.error("Error creating notification:", error);
+    return null; // Falha silenciosa para não quebrar o fluxo
   }
 }
 
-export async function getNotificationsByUser(userId: string, limit: number = 50) {
+export async function getNotificationsByUser(userId: string, limit: number = 10) {
   try {
     const notifications = await database.listDocuments(
       appwriteConfig.databaseId,
@@ -53,12 +64,10 @@ export async function getNotificationsByUser(userId: string, limit: number = 50)
       ]
     );
 
-    if (!notifications) throw Error;
-
     return notifications;
   } catch (error) {
-    console.log("Error getting notifications:", error);
-    throw error;
+    console.error("Error getting notifications:", error);
+    return { documents: [], total: 0 };
   }
 }
 
@@ -70,15 +79,13 @@ export async function getUnreadNotificationsCount(userId: string) {
       [
         Query.equal("recipientUserId", userId),
         Query.equal("isRead", false),
-        Query.limit(100) // Limite para performance
+        Query.limit(50)
       ]
     );
 
-    if (!notifications) throw Error;
-
     return notifications.total || notifications.documents.length;
   } catch (error) {
-    console.log("Error getting unread count:", error);
+    console.error("Error getting unread count:", error);
     return 0;
   }
 }
@@ -89,34 +96,34 @@ export async function markNotificationAsRead(notificationId: string) {
       appwriteConfig.databaseId,
       appwriteConfig.notificationsCollectionId,
       notificationId,
-      {
-        isRead: true
-      }
+      { isRead: true }
     );
-
-    if (!updatedNotification) throw Error;
 
     return updatedNotification;
   } catch (error) {
-    console.log("Error marking notification as read:", error);
+    console.error("Error marking notification as read:", error);
     throw error;
   }
 }
 
 export async function markAllNotificationsAsRead(userId: string) {
   try {
-    // Buscar todas as notificações não lidas
+    // Buscar notificações não lidas
     const unreadNotifications = await database.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.notificationsCollectionId,
       [
         Query.equal("recipientUserId", userId),
         Query.equal("isRead", false),
-        Query.limit(100)
+        Query.limit(50)
       ]
     );
 
-    // Marcar cada uma como lida
+    if (unreadNotifications.documents.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Marcar todas como lidas
     const updatePromises = unreadNotifications.documents.map(notification =>
       database.updateDocument(
         appwriteConfig.databaseId,
@@ -128,115 +135,28 @@ export async function markAllNotificationsAsRead(userId: string) {
 
     await Promise.all(updatePromises);
     
-    console.log(`Marked ${unreadNotifications.documents.length} notifications as read`);
     return { success: true, count: unreadNotifications.documents.length };
   } catch (error) {
-    console.log("Error marking all notifications as read:", error);
+    console.error("Error marking all notifications as read:", error);
     throw error;
   }
 }
 
-export async function deleteNotification(notificationId: string) {
-  try {
-    const statusCode = await database.deleteDocument(
-      appwriteConfig.databaseId,
-      appwriteConfig.notificationsCollectionId,
-      notificationId
-    );
-
-    if (!statusCode) throw Error;
-
-    return { status: "Ok" };
-  } catch (error) {
-    console.log("Error deleting notification:", error);
-    throw error;
-  }
-}
-
-export async function deleteAllReadNotifications(userId: string) {
-  try {
-    // Buscar todas as notificações lidas
-    const readNotifications = await database.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.notificationsCollectionId,
-      [
-        Query.equal("recipientUserId", userId),
-        Query.equal("isRead", true),
-        Query.limit(100)
-      ]
-    );
-
-    // Deletar cada uma
-    const deletePromises = readNotifications.documents.map(notification =>
-      database.deleteDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        notification.$id
-      )
-    );
-
-    await Promise.all(deletePromises);
-    
-    console.log(`Deleted ${readNotifications.documents.length} read notifications`);
-    return { success: true, count: readNotifications.documents.length };
-  } catch (error) {
-    console.log("Error deleting read notifications:", error);
-    throw error;
-  }
-}
-
-// ==================== UTILITY FUNCTIONS ====================
-
-export async function cleanupOldNotifications(userId: string, daysOld: number = 30) {
-  try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-
-    const oldNotifications = await database.listDocuments(
-      appwriteConfig.databaseId,
-      appwriteConfig.notificationsCollectionId,
-      [
-        Query.equal("recipientUserId", userId),
-        Query.lessThan("$createdAt", cutoffDate.toISOString()),
-        Query.limit(100)
-      ]
-    );
-
-    const deletePromises = oldNotifications.documents.map(notification =>
-      database.deleteDocument(
-        appwriteConfig.databaseId,
-        appwriteConfig.notificationsCollectionId,
-        notification.$id
-      )
-    );
-
-    await Promise.all(deletePromises);
-    
-    console.log(`Cleaned up ${oldNotifications.documents.length} old notifications`);
-    return { success: true, count: oldNotifications.documents.length };
-  } catch (error) {
-    console.log("Error cleaning up old notifications:", error);
-    throw error;
-  }
-}
-
-// ==================== MESSAGE BUILDERS ====================
-
+// Helper para criar mensagens
 export const buildNotificationMessage = (
   type: 'like' | 'comment' | 'reply',
   triggerUserName: string,
   postTitle?: string
 ): string => {
+  const title = postTitle ? `"${postTitle}"` : 'seu post';
+  
   switch (type) {
     case 'like':
-      return `${triggerUserName} curtiu seu post "${postTitle}"`;
-    
+      return `${triggerUserName} curtiu ${title}`;
     case 'comment':
-      return `${triggerUserName} comentou em seu post "${postTitle}"`;
-    
+      return `${triggerUserName} comentou em ${title}`;
     case 'reply':
-      return `${triggerUserName} respondeu seu comentário em "${postTitle}"`;
-    
+      return `${triggerUserName} respondeu seu comentário`;
     default:
       return `${triggerUserName} interagiu com seu conteúdo`;
   }
