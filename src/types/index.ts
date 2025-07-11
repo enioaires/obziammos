@@ -33,6 +33,7 @@ export type INewPost = {
   audioFile?: File[];
   adventures: string[];
   tags?: string;
+  captionImageIds?: string[];
 };
 
 export type IUpdatePost = {
@@ -47,6 +48,7 @@ export type IUpdatePost = {
   audioUrl?: string;
   adventures: string[];
   tags?: string;
+  captionImageIds?: string[];
 };
 
 export type IUser = {

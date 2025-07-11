@@ -21,15 +21,16 @@ import Loader from "../shared/Loader";
 import { Models } from "appwrite";
 import { MultiSelect } from "../shared/multi-select";
 import { PostSchema } from "@/lib/validation";
-import { RichTextEditor } from "../shared/rich-text-editor";
 import { getAvailableTags } from "@/lib/tags";
 import { isAdmin } from "@/lib/adventures";
 import { useForm } from "react-hook-form";
+import { TinyMCEEditor } from "../shared/TinyMCEEditor";
 import { useGetAdventuresForUser } from "@/lib/react-query/adventures";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../ui/use-toast";
 import { useUserContext } from "@/context/AuthContext";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { extractImageIdsFromCaption } from "@/lib/utils";
 
 interface PostFormProps {
   post?: Models.Document;
@@ -91,10 +92,8 @@ const PostForm = ({ post, action }: PostFormProps) => {
       });
     }
 
-    // Garantir que adventures é um array (vazio para posts públicos)
     const adventures = values.adventures || [];
 
-    // VALIDAR SE USUÁRIO PODE POSTAR NAS AVENTURAS SELECIONADAS
     if (!isAdmin(user) && adventures.length > 0) {
       const userAdventureIds = userAdventures?.documents.map(a => a.$id) || [];
       const canPost = adventures.every(adventureId =>
@@ -109,6 +108,8 @@ const PostForm = ({ post, action }: PostFormProps) => {
       }
     }
 
+    const captionImageIds = extractImageIdsFromCaption(values.captions);
+
     if (post && action === "update") {
       const updatedPost = await updatePost({
         ...values,
@@ -120,6 +121,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
         audioUrl: post.audioUrl,
         adventures: adventures,
         tags: values.tags.join(","),
+        captionImageIds: captionImageIds,
       });
 
       if (!updatedPost)
@@ -137,6 +139,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
       userId: user.id,
       adventures: adventures,
       tags: values.tags.join(","),
+      captionImageIds: captionImageIds,
     });
 
     if (!newPost)
@@ -175,10 +178,10 @@ const PostForm = ({ post, action }: PostFormProps) => {
             <FormItem>
               <FormLabel className="shad-form_label">Legenda</FormLabel>
               <FormControl>
-                <RichTextEditor
+                <TinyMCEEditor
                   value={field.value}
                   onChange={field.onChange}
-                  placeholder="Digite sua legenda aqui... Use as ferramentas de formatação acima."
+                  placeholder="Digite sua legenda aqui... Use as ferramentas acima ou cole imagens diretamente."
                   className="w-full"
                 />
               </FormControl>
@@ -250,8 +253,8 @@ const PostForm = ({ post, action }: PostFormProps) => {
 
                     {/* Indicador de Visibilidade */}
                     <div className={`p-3 rounded-lg border transition-colors ${isPublicPost
-                        ? 'bg-blue-500/10 border-blue-500/30'
-                        : 'bg-green-500/10 border-green-500/30'
+                      ? 'bg-blue-500/10 border-blue-500/30'
+                      : 'bg-green-500/10 border-green-500/30'
                       }`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-lg">

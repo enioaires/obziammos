@@ -23,6 +23,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.0.5
         version: 5.79.0(react@18.3.1)
+      '@tinymce/tinymce-react':
+        specifier: ^6.2.1
+        version: 6.2.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@vercel/analytics':
         specifier: ^1.5.0
         version: 1.5.0(react@18.3.1)
@@ -606,6 +609,16 @@ packages:
     resolution: {integrity: sha512-DjC4JIYZnYzxaTzbg3osOU63VNLP67dOrWet2cZvXgmgwAXNxfS52AMq86M5++ILuzW+BqTUEVMTjhrZ7/XBuA==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tinymce/tinymce-react@6.2.1':
+    resolution: {integrity: sha512-P/xWz3sNeJ2kXykxBkxM+4vEUYFlqWuJFifcJTmIwqHODJc17eZWvtNapzqGD+mUjXglf3VePu7ojRV1kdK22A==}
+    peerDependencies:
+      react: ^19.0.0 || ^18.0.0 || ^17.0.1 || ^16.7.0
+      react-dom: ^19.0.0 || ^18.0.0 || ^17.0.1 || ^16.7.0
+      tinymce: ^7.0.0 || ^6.0.0 || ^5.5.1
+    peerDependenciesMeta:
+      tinymce:
+        optional: true
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -2183,6 +2196,12 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.79.0
       react: 18.3.1
+
+  '@tinymce/tinymce-react@6.2.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   '@types/babel__core@7.20.5':
     dependencies:

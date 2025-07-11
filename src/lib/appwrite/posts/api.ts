@@ -51,25 +51,22 @@ export async function deleteFile(fileId: string) {
 
 export async function createPost(post: INewPost) {
   try {
-    // Upload file to appwrite storage
     const uploadedFile = await uploadFile(post.file[0]);
 
     if (!uploadedFile) throw Error;
 
-    // Get file url
     const fileUrl = getFilePreview(uploadedFile.$id);
     if (!fileUrl) {
       await deleteFile(uploadedFile.$id);
       throw Error;
     }
 
-    // Upload audio file if provided
     let audioUrl = null;
     let audioId = null;
-    
+
     if (post.audioFile && post.audioFile.length > 0) {
       const uploadedAudioFile = await uploadFile(post.audioFile[0]);
-      
+
       if (!uploadedAudioFile) {
         await deleteFile(uploadedFile.$id);
         throw Error;
@@ -77,7 +74,7 @@ export async function createPost(post: INewPost) {
 
       audioUrl = getAudioFileUrl(uploadedAudioFile.$id);
       audioId = uploadedAudioFile.$id;
-      
+
       if (!audioUrl) {
         await deleteFile(uploadedFile.$id);
         await deleteFile(uploadedAudioFile.$id);
@@ -85,22 +82,17 @@ export async function createPost(post: INewPost) {
       }
     }
 
-    // Convert tags into array
     const tags = post.tags?.replace(/ /g, "").split(",") || [];
 
-    // Prepare captions - handle both string and legacy array format
     let captions: string | string[];
     if (typeof post.captions === 'string') {
       captions = post.captions;
     } else {
-      // Legacy support for array format
       captions = Array.isArray(post.captions) ? post.captions : [post.captions];
     }
 
-    // Ensure adventures is an array (empty array for public posts)
     const adventures = post.adventures || [];
 
-    // Create post
     const newPost = await database.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
@@ -111,10 +103,11 @@ export async function createPost(post: INewPost) {
         captions: captions,
         imageUrl: fileUrl,
         imageId: uploadedFile.$id,
-        audioUrl: audioUrl, // NOVO: URL do áudio
-        audioId: audioId,   // NOVO: ID do áudio
+        audioUrl: audioUrl,
+        audioId: audioId,
         adventures: adventures,
         tags: tags,
+        captionImageIds: post.captionImageIds || [],
       }
     );
 
@@ -146,11 +139,9 @@ export async function updatePost(post: IUpdatePost) {
     };
 
     if (hasFileToUpdate) {
-      // Upload new file to appwrite storage
       const uploadedFile = await uploadFile(post.file[0]);
       if (!uploadedFile) throw Error;
 
-      // Get new file url
       const fileUrl = getFilePreview(uploadedFile.$id);
       if (!fileUrl) {
         await deleteFile(uploadedFile.$id);
@@ -161,14 +152,12 @@ export async function updatePost(post: IUpdatePost) {
     }
 
     if (hasAudioToUpdate) {
-      // Upload new audio file
       const uploadedAudioFile = await uploadFile(post.audioFile![0]);
       if (!uploadedAudioFile) {
         if (hasFileToUpdate) await deleteFile(image.imageId);
         throw Error;
       }
 
-      // Get new audio url
       const audioUrl = getAudioFileUrl(uploadedAudioFile.$id);
       if (!audioUrl) {
         await deleteFile(uploadedAudioFile.$id);
@@ -179,22 +168,17 @@ export async function updatePost(post: IUpdatePost) {
       audio = { audioUrl: audioUrl.toString(), audioId: uploadedAudioFile.$id };
     }
 
-    // Convert tags into array
     const tags = post.tags?.replace(/ /g, "").split(",") || [];
 
-    // Prepare captions - handle both string and legacy array format
     let captions: string | string[];
     if (typeof post.captions === 'string') {
       captions = post.captions;
     } else {
-      // Legacy support for array format
       captions = Array.isArray(post.captions) ? post.captions : [post.captions];
     }
 
-    // Ensure adventures is an array (empty array for public posts)
     const adventures = post.adventures || [];
 
-    //  Update post
     const updatedPost = await database.updateDocument(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
@@ -204,16 +188,15 @@ export async function updatePost(post: IUpdatePost) {
         captions: captions,
         imageUrl: image.imageUrl,
         imageId: image.imageId,
-        audioUrl: audio.audioUrl,   // NOVO: URL do áudio
-        audioId: audio.audioId,     // NOVO: ID do áudio
+        audioUrl: audio.audioUrl,
+        audioId: audio.audioId,
         adventures: adventures,
         tags: tags,
+        captionImageIds: post.captionImageIds || [], // NOVO
       }
     );
 
-    // Failed to update
     if (!updatedPost) {
-      // Delete new files that have been recently uploaded
       if (hasFileToUpdate) {
         await deleteFile(image.imageId);
       }
@@ -224,7 +207,6 @@ export async function updatePost(post: IUpdatePost) {
       throw Error;
     }
 
-    // Safely delete old files after successful update
     if (hasFileToUpdate) {
       await deleteFile(post.imageId);
     }
@@ -238,7 +220,7 @@ export async function updatePost(post: IUpdatePost) {
   }
 }
 
-export async function deletePost(postId?: string, imageId?: string) {
+export async function deletePost(postId?: string, imageId?: string, captionImageIds?: string[]) {
   if (!postId || !imageId) return;
 
   try {
@@ -251,6 +233,10 @@ export async function deletePost(postId?: string, imageId?: string) {
     if (!statusCode) throw Error;
 
     await deleteFile(imageId);
+
+    if (captionImageIds && captionImageIds.length > 0) {
+      await deleteCaptionImages(captionImageIds);
+    }
 
     return { status: "Ok" };
   } catch (error) {
@@ -308,10 +294,10 @@ export async function getFilteredPostsForUser(userAdventureIds: string[], public
 
     // 🆕 PASSO 2: Buscar posts de aventuras que o usuário tem acesso
     let adventurePosts: any = { documents: [] };
-    
+
     // Combinar IDs de aventuras privadas (onde participa) + públicas
     const allAccessibleAdventureIds = [...new Set([...userAdventureIds, ...publicAdventureIds])];
-    
+
     if (allAccessibleAdventureIds.length > 0) {
       adventurePosts = await getPostsByAdventures(allAccessibleAdventureIds);
     }
@@ -328,7 +314,7 @@ export async function getFilteredPostsForUser(userAdventureIds: string[], public
     );
 
     // 🆕 PASSO 5: Ordenar por data (mais recentes primeiro)
-    const sortedPosts = uniquePosts.sort((a, b) => 
+    const sortedPosts = uniquePosts.sort((a, b) =>
       new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
     );
 
@@ -365,7 +351,7 @@ export async function getPostsByTag(tagName: string) {
     if (!posts) throw Error;
 
     // Normaliza a tag de busca (remove acentos, converte para minúsculo)
-    const normalizeText = (text: string) => 
+    const normalizeText = (text: string) =>
       text.toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
@@ -375,8 +361,8 @@ export async function getPostsByTag(tagName: string) {
     // Filtra posts que contenham a tag (case-insensitive, sem acentos)
     const filteredPosts = {
       ...posts,
-      documents: posts.documents.filter((post: any) => 
-        post.tags && post.tags.some((tag: string) => 
+      documents: posts.documents.filter((post: any) =>
+        post.tags && post.tags.some((tag: string) =>
           normalizeText(tag).includes(normalizedSearchTag)
         )
       )
@@ -395,14 +381,14 @@ export async function getPostsByTagForUser(tagName: string, userAdventureIds: st
     if (!tagName) return { documents: [] };
 
     let posts;
-    
+
     if (isAdmin) {
       // Admins veem todos os posts
       posts = await getPostsByTag(tagName);
     } else {
       // Buscar todos os posts da tag
       const allTagPosts = await getPostsByTag(tagName);
-      
+
       // Filtrar posts que o usuário pode ver
       const filteredPosts = {
         ...allTagPosts,
@@ -411,15 +397,15 @@ export async function getPostsByTagForUser(tagName: string, userAdventureIds: st
           if (!post.adventures || post.adventures.length === 0) {
             return true;
           }
-          
+
           // Post em aventuras do usuário (privadas + públicas)
           const allUserAdventureIds = [...new Set([...userAdventureIds, ...publicAdventureIds])];
-          return post.adventures.some((adventureId: string) => 
+          return post.adventures.some((adventureId: string) =>
             allUserAdventureIds.includes(adventureId)
           );
         })
       };
-      
+
       posts = filteredPosts;
     }
 
@@ -582,13 +568,13 @@ export async function getPublicPosts() {
 
 export async function getRecentPostsPaginated(page: number = 1, limit: number = 10) {
   const offset = (page - 1) * limit;
-  
+
   try {
     const posts = await database.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.postCollectionId,
       [
-        Query.orderDesc('$createdAt'), 
+        Query.orderDesc('$createdAt'),
         Query.limit(limit),
         Query.offset(offset)
       ]
@@ -620,5 +606,48 @@ export function getAudioFileUrl(fileId: string) {
     return audioUrl;
   } catch (error) {
     console.log(error);
+  }
+}
+
+export async function uploadCaptionImages(files: File[]) {
+  try {
+    const uploadPromises = files.map(file => uploadFile(file));
+    const uploadedFiles = await Promise.all(uploadPromises);
+
+    return uploadedFiles.filter(file => file !== undefined);
+  } catch (error) {
+    console.log("Erro ao fazer upload das imagens da legenda:", error);
+    throw error;
+  }
+}
+
+export async function deleteCaptionImages(imageIds: string[]) {
+  try {
+    const deletePromises = imageIds.map(id => deleteFile(id));
+    await Promise.all(deletePromises);
+    return { status: "ok" };
+  } catch (error) {
+    console.log("Erro ao deletar imagens da legenda:", error);
+  }
+}
+
+export async function cleanupOrphanedCaptionImages(
+  oldCaptionImageIds: string[] = [],
+  newCaptionImageIds: string[] = []
+) {
+  try {
+    // Encontrar imagens que não são mais usadas
+    const orphanedIds = oldCaptionImageIds.filter(
+      id => !newCaptionImageIds.includes(id)
+    );
+
+    if (orphanedIds.length > 0) {
+      await deleteCaptionImages(orphanedIds);
+      console.log(`Limpeza: ${orphanedIds.length} imagens órfãs removidas`);
+    }
+
+    return { removed: orphanedIds.length };
+  } catch (error) {
+    console.log("Erro na limpeza de imagens órfãs:", error);
   }
 }

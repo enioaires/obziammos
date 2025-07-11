@@ -621,4 +621,293 @@
   .animate-shimmer {
     animation: shimmer 2s infinite;
   }
+
+  .rich-text-content img {
+    @apply max-w-full h-auto rounded-lg my-3;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(135, 126, 255, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .rich-text-content img {
+      @apply max-w-sm mx-auto block;
+    }
+  }
+
+  /* Garantir que imagens não sejam maiores que o container */
+  .rich-text-content img {
+    max-width: min(100%, 400px) !important;
+    height: auto !important;
+  }
+
+  /* Espaçamento adequado entre texto e imagens */
+  .rich-text-content p:has(img) {
+    @apply mb-4;
+  }
+
+  .rich-text-content img+p {
+    @apply mt-4;
+  }
+
+  .tox .tox-dialog {
+    background-color: #101012 !important;
+    border: 1px solid #1F1F22 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7) !important;
+    overflow: hidden !important;
+  }
+
+  .tox .tox-dialog__header {
+    background-color: #101012 !important;
+    border-bottom: 1px solid #1F1F22 !important;
+    border-radius: 0 !important;
+    padding: 20px 24px !important;
+  }
+
+  .tox .tox-dialog__title {
+    color: #EFEFEF !important;
+    font-weight: 600 !important;
+    font-size: 18px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  }
+
+  .tox .tox-dialog__body {
+    background-color: #101012 !important;
+    color: #EFEFEF !important;
+    padding: 24px !important;
+  }
+
+  .tox .tox-dialog__footer {
+    background-color: #101012 !important;
+    border-top: 1px solid #1F1F22 !important;
+    border-radius: 0 !important;
+    padding: 20px 24px !important;
+    gap: 12px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Botões do modal */
+  .tox .tox-button {
+    background-color: #1F1F22 !important;
+    border: 1px solid #1F1F22 !important;
+    color: #7C7C8A !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    height: 44px !important;
+    min-width: 80px !important;
+  }
+
+  .tox .tox-button:hover {
+    background-color: #09090B !important;
+    border-color: #877EFF !important;
+    color: #877EFF !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .tox .tox-button--primary {
+    background-color: #877EFF !important;
+    border-color: #877EFF !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+  }
+
+  .tox .tox-button--primary:hover {
+    background-color: #A855F7 !important;
+    border-color: #A855F7 !important;
+    box-shadow: 0 4px 12px rgba(135, 126, 255, 0.3) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Campos de input no modal */
+  .tox .tox-textfield {
+    background-color: #09090B !important;
+    border: 1px solid #1F1F22 !important;
+    color: #EFEFEF !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+  }
+
+  .tox .tox-textfield:focus {
+    border-color: #877EFF !important;
+    box-shadow: 0 0 0 2px rgba(135, 126, 255, 0.2) !important;
+    outline: none !important;
+  }
+
+  /* Labels */
+  .tox .tox-label {
+    color: #EFEFEF !important;
+    font-weight: 500 !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Checkbox e radio */
+  .tox .tox-checkbox__input:checked+.tox-checkbox__icons .tox-checkbox-icon__checked {
+    background-color: #877EFF !important;
+  }
+
+  /* Tabs */
+  .tox .tox-tab {
+    background-color: transparent !important;
+    color: #7C7C8A !important;
+    border: none !important;
+    border-bottom: 3px solid transparent !important;
+    padding: 12px 20px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .tox .tox-tab:hover {
+    color: #877EFF !important;
+    background-color: rgba(135, 126, 255, 0.1) !important;
+  }
+
+  .tox .tox-tab--active {
+    color: #877EFF !important;
+    border-bottom-color: #877EFF !important;
+    background-color: rgba(135, 126, 255, 0.1) !important;
+    font-weight: 600 !important;
+  }
+
+  /* Tab content area */
+  .tox .tox-tab-group {
+    border-bottom: 1px solid #1F1F22 !important;
+  }
+
+  /* Upload area no modal de imagem */
+  .tox .tox-dropzone {
+    background-color: #1F1F22 !important;
+    border: 2px dashed #877EFF !important;
+    border-radius: 12px !important;
+    color: #7C7C8A !important;
+    transition: all 0.3s ease !important;
+    padding: 40px 20px !important;
+    text-align: center !important;
+    margin: 16px 0 !important;
+  }
+
+  .tox .tox-dropzone:hover,
+  .tox .tox-dropzone--active {
+    border-color: #A855F7 !important;
+    background-color: rgba(135, 126, 255, 0.1) !important;
+    color: #877EFF !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(135, 126, 255, 0.2) !important;
+  }
+
+  /* Browse button dentro do dropzone */
+  .tox .tox-dropzone .tox-button {
+    background-color: #877EFF !important;
+    border-color: #877EFF !important;
+    color: #FFFFFF !important;
+    margin-top: 16px !important;
+    font-weight: 600 !important;
+  }
+
+  /* Scrollbar no modal */
+  .tox .tox-dialog__body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .tox .tox-dialog__body::-webkit-scrollbar-track {
+    background: #09090B;
+    border-radius: 3px;
+  }
+
+  .tox .tox-dialog__body::-webkit-scrollbar-thumb {
+    background: #877EFF;
+    border-radius: 3px;
+  }
+
+  .tox .tox-dialog__body::-webkit-scrollbar-thumb:hover {
+    background: #A855F7;
+  }
+
+  /* Overlay do modal */
+  .tox .tox-dialog-wrap {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
+  }
+
+  /* Botão de fechar */
+  .tox .tox-button--icon-only {
+    background-color: transparent !important;
+    border: none !important;
+    color: #7C7C8A !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .tox .tox-button--icon-only:hover {
+    background-color: #1F1F22 !important;
+    color: #EFEFEF !important;
+  }
+
+  /* Form groups e spacing */
+  .tox .tox-form__group {
+    margin-bottom: 20px !important;
+  }
+
+  .tox .tox-form__group:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /* Estilo especial para área de upload quando não tem imagem */
+  .tox .tox-dropzone:empty::before {
+    content: "📸 Arraste uma imagem aqui ou clique para selecionar" !important;
+    display: block !important;
+    font-size: 16px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .tox .tox-dropzone:empty::after {
+    content: "PNG, JPG, JPEG ou WebP (máx. 5MB)" !important;
+    display: block !important;
+    font-size: 12px !important;
+    opacity: 0.7 !important;
+  }
+
+  .tox .tox-statusbar {
+    background-color: #09090B !important;
+    border-top: 1px solid #1F1F22 !important;
+    color: #7C7C8A !important;
+    font-size: 11px !important;
+    padding: 8px 12px !important;
+  }
+
+  .tox .tox-statusbar__text-container {
+    color: #7C7C8A !important;
+  }
+
+  .tox .tox-statusbar__resize-handle {
+    background-color: #877EFF !important;
+    border-radius: 2px 0 0 0 !important;
+    opacity: 0.6 !important;
+    transition: opacity 0.2s ease !important;
+  }
+
+  .tox .tox-statusbar__resize-handle:hover {
+    opacity: 1 !important;
+    background-color: #A855F7 !important;
+  }
+
+  /* Animação suave para mudança de altura */
+  .tox .tox-edit-area {
+    transition: height 0.3s ease !important;
+  }
+
+  /* Melhorar a aparência do handle no mobile */
+  @media (max-width: 768px) {
+    .tox .tox-statusbar__resize-handle {
+      width: 20px !important;
+      height: 20px !important;
+    }
+  }
 }

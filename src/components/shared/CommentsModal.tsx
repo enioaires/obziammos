@@ -65,7 +65,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
                 <span className="text-light-4 text-sm">•</span>
                 <span className="text-light-4 text-sm">{timeAgo(post.$createdAt)}</span>
               </div>
-              <Link 
+              <Link
                 to={`/posts/${post.$id}`}
                 className="text-primary-500 hover:text-primary-400 text-sm transition-colors"
                 onClick={onClose}
@@ -74,7 +74,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
               </Link>
             </div>
           </div>
-          
+
           <button
             onClick={onClose}
             className="p-2 hover:bg-dark-3 rounded-lg transition-colors text-light-3 hover:text-light-1 flex-shrink-0 ml-4"
@@ -88,7 +88,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
           <h3 className="font-semibold text-lg text-light-1 mb-3 line-clamp-2">
             {post.title}
           </h3>
-          
+
           <div className="flex gap-4">
             {/* Imagem do post */}
             <div className="flex-shrink-0">
@@ -98,22 +98,25 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
                 className="w-20 h-20 rounded-lg object-cover"
               />
             </div>
-            
+
             {/* Legenda (preview) */}
             <div className="flex-1 min-w-0">
               <div className="text-light-3 text-sm line-clamp-3 leading-relaxed">
                 {/* Renderizar legenda de forma simples no modal */}
                 {typeof post.captions === 'string' ? (
-                  <div dangerouslySetInnerHTML={{ __html: post.captions }} />
+                  <div
+                    dangerouslySetInnerHTML={{ __html: post.captions }}
+                    className="rich-text-content" // ADICIONAR classe
+                  />
                 ) : (
-                  <div>
+                  <div className="rich-text-content"> {/* ADICIONAR classe */}
                     {Array.isArray(post.captions) ? post.captions.map((caption, index) => (
                       <div key={index} dangerouslySetInnerHTML={{ __html: caption }} />
                     )) : null}
                   </div>
                 )}
               </div>
-              
+
               {/* Tags */}
               {post.tags && post.tags.length > 0 && (
                 <div className="flex gap-1 mt-2 flex-wrap">
@@ -140,7 +143,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({
               <CommentsSection
                 postId={post.$id}
                 isExpanded={true}
-                onToggle={() => {}} // Não usa toggle no modal
+                onToggle={() => { }} // Não usa toggle no modal
                 isModal={true}
               />
             </div>

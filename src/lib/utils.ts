@@ -63,11 +63,11 @@ export const checkIsLiked = (likeList: string[], userId: string) => {
 
 export const isUserOnline = (lastSeen: string): boolean => {
   if (!lastSeen) return false;
-  
+
   const now = new Date();
   const lastSeenDate = new Date(lastSeen);
   const diffInMinutes = (now.getTime() - lastSeenDate.getTime()) / (1000 * 60);
-  
+
   // Considera online se visto nos últimos 5 minutos
   return diffInMinutes <= 5;
 };
@@ -90,7 +90,7 @@ export const getOnlineStatus = (lastSeen: string): {
   const now = new Date();
   const lastSeenDate = new Date(lastSeen);
   const diffInMinutes = (now.getTime() - lastSeenDate.getTime()) / (1000 * 60);
-  
+
   if (diffInMinutes <= 2) {
     return {
       isOnline: true,
@@ -140,11 +140,11 @@ export const getOnlineStatus = (lastSeen: string): {
 
 export const formatLastSeen = (lastSeen: string): string => {
   if (!lastSeen) return 'Nunca visto';
-  
+
   const now = new Date();
   const lastSeenDate = new Date(lastSeen);
   const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
-  
+
   if (diffInSeconds < 60) {
     return 'Agora mesmo';
   } else if (diffInSeconds < 3600) {
@@ -158,3 +158,20 @@ export const formatLastSeen = (lastSeen: string): string => {
     return `${days} dia${days !== 1 ? 's' : ''} atrás`;
   }
 };
+
+export function extractImageIdsFromCaption(htmlContent: string): string[] {
+  if (!htmlContent) return [];
+
+  const imageIds: string[] = [];
+  const imgRegex = /<img[^>]+src="[^"]*\/files\/([^"\/]+)\/[^"]*"[^>]*>/g;
+
+  let match;
+  while ((match = imgRegex.exec(htmlContent)) !== null) {
+    const imageId = match[1];
+    if (imageId && !imageIds.includes(imageId)) {
+      imageIds.push(imageId);
+    }
+  }
+
+  return imageIds;
+}
