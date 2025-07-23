@@ -4,7 +4,11 @@ import { useGetUnreadCount } from '@/lib/react-query/notifications';
 import { useState } from 'react';
 import { useUserContext } from '@/context/AuthContext';
 
-const NotificationBell = () => {
+interface NotificationBellProps {
+  className?: string;
+}
+
+const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) => {
   const { user } = useUserContext();
   const [isOpen, setIsOpen] = useState(false);
   const { data: unreadCount = 0, isLoading } = useGetUnreadCount(user.id);
@@ -13,10 +17,10 @@ const NotificationBell = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-dark-3 transition-colors"
+        className={`relative p-2 rounded-lg hover:bg-dark-3 transition-colors ${className}`}
       >
         <Bell className="w-5 h-5 text-light-3" />
-        
+
         {!isLoading && unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -26,7 +30,7 @@ const NotificationBell = () => {
 
       {isOpen && (
         <>
-          <div 
+          <div
             className="fixed inset-0 z-40 bg-black/50 sm:bg-transparent"
             onClick={() => setIsOpen(false)}
           />
