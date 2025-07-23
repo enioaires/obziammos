@@ -176,7 +176,6 @@ const PostForm = ({ post, action }: PostFormProps) => {
           name="captions"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="shad-form_label">Legenda</FormLabel>
               <FormControl>
                 <TinyMCEEditor
                   value={field.value}
