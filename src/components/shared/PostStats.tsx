@@ -13,6 +13,7 @@ import { checkIsLiked } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useGetCommentsCount } from "@/lib/react-query/comments";
 import { useLocation } from "react-router-dom";
+import ShareButton from './ShareButton';
 
 type PostStatsProps = {
   post: Models.Document;
@@ -144,25 +145,32 @@ const PostStats = ({
           </button>
         </div>
 
-        {/* Save */}
-        <button
-          onClick={handleSavePost}
-          className="hover:scale-105 transition-transform"
-        >
-          <div className={cn(
-            "p-2 rounded-full transition-all duration-200",
-            isSaved
-              ? "bg-primary-500/20 text-primary-500"
-              : "hover:bg-dark-3 text-light-3 hover:text-primary-500"
-          )}>
-            <Bookmark
-              className={cn(
-                "w-5 h-5 transition-all duration-200",
-                isSaved && "fill-current"
-              )}
-            />
-          </div>
-        </button>
+        <div className="flex items-center gap-6">
+          <ShareButton
+            post={{ $id: post.$id, title: post.title, imageUrl: post.imageUrl }}
+            variant="icon"
+          />
+          {/* Save */}
+          <button
+            onClick={handleSavePost}
+            className="hover:scale-105 transition-transform"
+          >
+            <div className={cn(
+              "p-2 rounded-full transition-all duration-200",
+              isSaved
+                ? "bg-primary-500/20 text-primary-500"
+                : "hover:bg-dark-3 text-light-3 hover:text-primary-500"
+            )}>
+              <Bookmark
+                className={cn(
+                  "w-5 h-5 transition-all duration-200",
+                  isSaved && "fill-current"
+                )}
+              />
+            </div>
+          </button>
+        </div>
+
       </div>
 
       {/* Modal de comentários para páginas que não são detalhes */}
