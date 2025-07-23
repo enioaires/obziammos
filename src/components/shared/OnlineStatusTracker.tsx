@@ -4,17 +4,14 @@ import { useUserContext } from '@/context/AuthContext';
 const OnlineStatusTracker = () => {
   const { isAuthenticated, user } = useUserContext();
 
-  if(!isAuthenticated || !user.id) {
-    return null; // Componente invisível
+  if (!isAuthenticated || !user.id) {
+    return null;
   }
-  
-  useOnlineStatus({
-    updateInterval: 2,
-    enableVisibilityTracking: true,
-    enableBeforeUnload: true
-  });
 
-  return null; // Componente invisível
+  // Remover os argumentos
+  useOnlineStatus();
+
+  return null;
 };
 
 export default OnlineStatusTracker;
